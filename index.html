@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Campana — Seguridad Ciudadana</title>
+  
+  <!-- Leaflet CSS for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --primary: #F97316;
+      --primary-dark: #EA580C;
+      --primary-light: #FFEDD5;
+      --secondary: #0F172A;
+      --secondary-blue: #1E3A8A;
+      --accent-red: #EF4444;
+      --accent-green: #10B981;
+      --accent-amber: #F59E0B;
+      --bg-app: #F8FAFC;
+      --card-bg: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: #020617;
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    /* Device Shell (Modo Escritorio) */
+    .mobile-frame {
+      width: 100%;
+      max-width: 412px;
+      height: 100%;
+      max-height: 860px;
+      background: #1E293B;
+      border-radius: 48px;
+      padding: 12px;
+      box-shadow: 0 0 0 2px #334155, 0 25px 60px rgba(0, 0, 0, 0.7);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .app-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-app);
+      border-radius: 38px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Adaptabilidad nativa para smartphones reales */
+    @media (max-width: 500px) {
+      body {
+        padding: 0;
+        background: var(--bg-app);
+      }
+
+      .mobile-frame {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100dvh;
+        border-radius: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+      }
+
+      .app-screen {
+        border-radius: 0;
+      }
+
+      .dynamic-island {
+        display: none;
+      }
+
+      .status-bar {
+        padding-top: env(safe-area-inset-top, 8px);
+        height: calc(44px + env(safe-area-inset-top, 0px));
+      }
+
+      .bottom-nav {
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        height: calc(78px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+
+    /* Top Status Bar */
+    .status-bar {
+      height: 44px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      z-index: 50;
+      background: transparent;
+    }
+
+    .status-bar.dark-mode {
+      color: #FFFFFF;
+    }
+
+    .dynamic-island {
+      width: 110px;
+      height: 26px;
+      background: #000;
+      border-radius: 20px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+
+    /* Router Container */
+    .view-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-app);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+      padding-bottom: 90px;
+    }
+
+    .view.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+
+    .view.full-screen {
+      padding-bottom: 0;
+    }
+
+    /* Header Nav */
+    .view-header {
+      padding: 16px 20px 12px;
+      background: rgba(248, 250, 252, 0.9);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    .view-header h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.4px;
+    }
+
+    .view-header p {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Navigation Bar */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 78px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 10px 12px;
+      z-index: 40;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: none;
+      transition: all 0.2s;
+      flex: 1;
+    }
+
+    .nav-item i {
+      width: 22px;
+      height: 22px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-fab {
+      position: relative;
+      top: -18px;
+    }
+
+    .fab-btn {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
+      border: 4px solid var(--bg-app);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .fab-btn:active {
+      transform: scale(0.92);
+    }
+
+    /* UI Controls */
+    .btn-main {
+      width: 100%;
+      height: 50px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 6px 18px rgba(249, 115, 22, 0.25);
+      transition: all 0.2s;
+    }
+
+    .btn-main:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      height: 48px;
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+      box-shadow: 0 6px 18px rgba(239, 68, 68, 0.25);
+      color: white;
+      border: none;
+    }
+
+    .input-group {
+      margin-bottom: 14px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-field {
+      width: 100%;
+      height: 46px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+    }
+
+    .textarea-field {
+      height: 75px;
+      padding: 10px 14px;
+      resize: none;
+    }
+
+    /* Cards & Badges */
+    .incident-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin: 0 20px 10px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-content {
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .status-review { background: #FEF3C7; color: #D97706; }
+    .status-done { background: #D1FAE5; color: #059669; }
+
+    /* Map Box */
+    #map {
+      width: 100%;
+      height: 250px;
+      z-index: 10;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Chip Selector */
+    .chips-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .chip-item {
+      padding: 10px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip-item.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+
+    /* Photo Upload Preview */
+    .upload-box {
+      border: 2px dashed var(--border-color);
+      background: var(--card-bg);
+      border-radius: var(--radius-sm);
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: absolute;
+      top: 55px;
+      left: 20px;
+      right: 20px;
+      background: #0F172A;
+      color: white;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 200;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      transform: translateY(-100px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    /* Screens Specifics */
+    #view-splash {
+      background: linear-gradient(180deg, #0F172A 0%, #020617 100%);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 40px;
+      z-index: 60;
+    }
+
+    .splash-logo {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 15px 35px rgba(249, 115, 22, 0.4);
+      margin-bottom: 20px;
+    }
+
+    .auth-container {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .profile-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: var(--radius-md);
+      margin: 0 20px 16px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .profile-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--secondary-blue) 0%, #1E293B 100%);
+      color: white;
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+    }
+
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Audio de alerta cargado desde song.mp3 -->
+  <audio id="alertSound" src="song.mp3" preload="auto"></audio>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="appToast">
+    <i data-lucide="info" style="color: var(--primary); width: 18px; height: 18px;"></i>
+    <span id="toastMsg">Mensaje de sistema</span>
+  </div>
+
+  <div class="mobile-frame">
+    <div class="app-screen">
+      
+      <!-- Top Status Bar -->
+      <div class="dynamic-island"></div>
+      <div class="status-bar" id="statusBar">
+        <span id="clock">9:41</span>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <i data-lucide="signal" style="width: 14px; height: 14px;"></i>
+          <i data-lucide="wifi" style="width: 14px; height: 14px;"></i>
+          <i data-lucide="battery" style="width: 16px; height: 16px;"></i>
+        </div>
+      </div>
+
+      <div class="view-container">
+
+        <!-- 1. SPLASH SCREEN -->
+        <div class="view full-screen active" id="view-splash">
+          <div class="splash-logo">
+            <i data-lucide="bell" style="width: 44px; height: 44px;"></i>
+          </div>
+          <h1 style="color: white; font-size: 26px; font-weight: 800;">Campana</h1>
+          <p style="color: #94A3B8; font-size: 13px; margin-top: 4px; margin-bottom: 30px;">Red Ciudadana de Alerta Temprana</p>
+          <button class="btn-main" style="width: 80%;" onclick="navigateTo('view-login')">
+            Comenzar <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- 2. LOGIN VIEW -->
+        <div class="view full-screen" id="view-login">
+          <div class="auth-container">
+            <div style="margin-bottom: 24px;">
+              <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main);">Iniciar Sesión</h2>
+              <p style="color: var(--text-muted); font-size: 13px;">Accede a tu cuenta de alerta ciudadana</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+              <div class="input-group">
+                <label>Correo Electrónico</label>
+                <input type="email" id="loginEmail" class="input-field" placeholder="ejemplo@correo.com" required>
+              </div>
+
+              <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="loginPass" class="input-field" placeholder="••••••••" required>
+              </div>
+
+              <button type="submit" class="btn-main" style="margin-top: 8px;">
+                Ingresar
+              </button>
+            </form>
+
+            <p style="text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-muted);">
+              ¿No tienes cuenta? <span style="color: var(--primary); font-weight: 700; cursor: pointer;" onclick="navigateTo('view-register')">Regístrate</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- 3. REGISTER VIEW -->
+        <div class="view full-screen" id="view-register">
+          <div class="auth-container">
+            <div style="margin-bottom: 20px;">
+              <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main);">Crear Cuenta</h2>
+              <p style="color: var(--text-muted); font-size: 13px;">Regístrate para reportar emergencias</p>
+            </div>
+
+            <form id="registerForm" onsubmit="handleRegister(event)">
+              <div class="input-group">
+                <label>Nombre Completo</label>
+                <input type="text" id="regName" class="input-field" placeholder="Ej. María Torres" required>
+              </div>
+
+              <div class="input-group">
+                <label>Correo Electrónico</label>
+                <input type="email" id="regEmail" class="input-field" placeholder="nombre@correo.com" required>
+              </div>
+
+              <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="regPass" class="input-field" placeholder="••••••••" minlength="6" required>
+              </div>
+
+              <button type="submit" class="btn-main" style="margin-top: 8px;">
+                Registrarse
+              </button>
+            </form>
+
+            <p style="text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-muted);">
+              ¿Ya tienes cuenta? <span style="color: var(--primary); font-weight: 700; cursor: pointer;" onclick="navigateTo('view-login')">Inicia sesión</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- 4. MAP / HOME VIEW -->
+        <div class="view" id="view-map">
+          <div class="view-header">
+            <div>
+              <h2>Mapa de Alertas</h2>
+              <p id="userZone">Zona: Detectando...</p>
+            </div>
+            <button onclick="centerUserLocation()" style="width: 36px; height: 36px; background: white; border-radius: 50%; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <i data-lucide="crosshair" style="width: 18px; height: 18px; color: var(--primary);"></i>
+            </button>
+          </div>
+
+          <div id="map"></div>
+
+          <div style="padding: 14px 20px 8px;">
+            <h3 style="font-size: 13px; font-weight: 800; color: var(--text-main);">Alertas Cercanas</h3>
+          </div>
+
+          <div id="mapIncidentsList"></div>
+        </div>
+
+        <!-- 5. NUEVA ALERTA FORM VIEW -->
+        <div class="view" id="view-alert">
+          <div class="view-header">
+            <div>
+              <h2>Nueva Alerta</h2>
+              <p>Enviar reporte a la central</p>
+            </div>
+          </div>
+
+          <form id="alertForm" onsubmit="handleSendAlert(event)" style="padding: 16px 20px;">
+            <div class="input-group">
+              <label>Tipo de Incidente</label>
+              <div class="chips-grid">
+                <div class="chip-item active" onclick="selectChip(this, 'Robo')">
+                  <i data-lucide="shield-alert" style="width: 16px; height: 16px;"></i> Robo
+                </div>
+                <div class="chip-item" onclick="selectChip(this, 'Sospechoso')">
+                  <i data-lucide="eye" style="width: 16px; height: 16px;"></i> Sospechoso
+                </div>
+                <div class="chip-item" onclick="selectChip(this, 'Incendio')">
+                  <i data-lucide="flame" style="width: 16px; height: 16px;"></i> Incendio
+                </div>
+                <div class="chip-item" onclick="selectChip(this, 'Accidente')">
+                  <i data-lucide="activity" style="width: 16px; height: 16px;"></i> Accidente
+                </div>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Ubicación Actual (Detectada GPS)</label>
+              <input type="text" id="alertAddress" class="input-field" value="Obteniendo posición GPS..." readonly style="background: #F1F5F9;">
+            </div>
+
+            <div class="input-group">
+              <label>Descripción del Hecho</label>
+              <textarea id="alertDesc" class="input-field textarea-field" placeholder="Describe lo que está sucediendo..." required></textarea>
+            </div>
+
+            <div class="input-group">
+              <label>Evidencia Fotográfica</label>
+              <input type="file" id="photoInput" accept="image/*" style="display: none;" onchange="handlePhotoUpload(event)">
+              <div class="upload-box" onclick="document.getElementById('photoInput').click()">
+                <i data-lucide="camera" style="width: 18px; height: 18px; color: var(--primary);"></i>
+                <span id="uploadText">Adjuntar Fotografía</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-main btn-danger">
+              <i data-lucide="bell"></i> Enviar Alerta Inmediata
+            </button>
+          </form>
+        </div>
+
+        <!-- 6. CONFIRMATION VIEW -->
+        <div class="view full-screen" id="view-confirm">
+          <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:30px; text-align:center;">
+            <div style="width:70px; height:70px; background:#D1FAE5; color:var(--accent-green); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:16px;">
+              <i data-lucide="check-circle-2" style="width: 40px; height: 40px;"></i>
+            </div>
+            <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">¡Alerta Registrada!</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">
+              Las unidades cercanas han sido notificadas con tus coordenadas exactas.
+            </p>
+
+            <button class="btn-main" style="width: 100%; margin-bottom: 10px;" onclick="navigateTo('view-history')">
+              Ver Mis Reportes
+            </button>
+            <button class="btn-secondary" style="width: 100%;" onclick="navigateTo('view-map')">
+              Volver al Mapa
+            </button>
+          </div>
+        </div>
+
+        <!-- 7. HISTORIAL VIEW -->
+        <div class="view" id="view-history">
+          <div class="view-header">
+            <div>
+              <h2>Mis Reportes</h2>
+              <p>Historial de alertas registradas</p>
+            </div>
+          </div>
+
+          <div id="historyList" style="padding-top: 10px;"></div>
+        </div>
+
+        <!-- 8. PERFIL VIEW -->
+        <div class="view" id="view-profile">
+          <div class="view-header">
+            <div>
+              <h2>Mi Perfil</h2>
+              <p>Gestión de datos de usuario</p>
+            </div>
+          </div>
+
+          <div class="profile-card">
+            <div class="profile-avatar" id="profAvatar">--</div>
+            <h3 id="profName" style="font-size: 16px; font-weight: 800;">Cargando...</h3>
+            <p id="profEmail" style="font-size: 12px; color: var(--text-muted);">cargando@correo.com</p>
+          </div>
+
+          <div style="margin: 0 20px 20px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color);">
+            <div class="profile-row">
+              <span style="color: var(--text-muted); font-weight: 600;">Alertas Reportadas</span>
+              <span id="profAlertCount" style="font-weight: 800; color: var(--text-main);">0</span>
+            </div>
+            <div class="profile-row">
+              <span style="color: var(--text-muted); font-weight: 600;">Estado de Cuenta</span>
+              <span style="font-weight: 800; color: var(--accent-green);">Verificado</span>
+            </div>
+            <div class="profile-row">
+              <span style="color: var(--text-muted); font-weight: 600;">Miembro desde</span>
+              <span style="font-weight: 800; color: var(--text-main);">2026</span>
+            </div>
+          </div>
+
+          <div style="padding: 0 20px;">
+            <button class="btn-secondary" style="color: var(--accent-red); border-color: #FCA5A5;" onclick="handleLogout()">
+              <i data-lucide="log-out" style="width: 18px; height: 18px;"></i> Cerrar Sesión
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Nav Bar -->
+      <div class="bottom-nav" id="bottomNav">
+        <button class="nav-item active" id="nav-map" onclick="navigateTo('view-map', this)">
+          <i data-lucide="map"></i>
+          <span>Mapa</span>
+        </button>
+        <button class="nav-item" id="nav-history" onclick="navigateTo('view-history', this)">
+          <i data-lucide="file-text"></i>
+          <span>Reportes</span>
+        </button>
+        <div class="nav-fab">
+          <div class="fab-btn" onclick="navigateTo('view-alert')">
+            <i data-lucide="bell" style="width: 26px; height: 26px;"></i>
+          </div>
+        </div>
+        <button class="nav-item" style="visibility: hidden;"></button>
+        <button class="nav-item" id="nav-profile" onclick="navigateTo('view-profile', this)">
+          <i data-lucide="user"></i>
+          <span>Perfil</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // --- APP STATE & STORAGE ---
+    let currentUser = JSON.parse(localStorage.getItem('campana_user')) || null;
+    let alertsData = JSON.parse(localStorage.getItem('campana_alerts')) || [
+      {
+        id: 1,
+        type: 'Robo',
+        desc: 'Sujeto sospechoso intentando abrir vehículo',
+        lat: -12.046374,
+        lng: -77.042793,
+        address: 'Av. Abancay, Cercado',
+        date: '07 Set. 2026',
+        status: 'En Revisión',
+        user: 'María Torres'
+      },
+      {
+        id: 2,
+        type: 'Sospechoso',
+        desc: 'Presencia extraña en parque vecinal',
+        lat: -12.048000,
+        lng: -77.040000,
+        address: 'Jr. Carabaya 102',
+        date: '06 Set. 2026',
+        status: 'Atendido',
+        user: 'Juan Pérez'
+      }
+    ];
+
+    let userCoords = { lat: -12.046374, lng: -77.042793 };
+    let selectedType = 'Robo';
+    let uploadedImageBase64 = null;
+    let map = null;
+    let userMarker = null;
+    let alertMarkersGroup = null;
+
+    // --- INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateClock();
+      setInterval(updateClock, 1000);
+      initGeolocation();
+
+      if (currentUser) {
+        navigateTo('view-map');
+      } else {
+        navigateTo('view-splash');
+      }
+    });
+
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clock').innerText = `${hours}:${mins}`;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('appToast');
+      document.getElementById('toastMsg').innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // --- NAVIGATION CONTROLLER ---
+    function navigateTo(viewId, navBtn = null) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const target = document.getElementById(viewId);
+      if (target) target.classList.add('active');
+
+      const bottomNav = document.getElementById('bottomNav');
+      const statusBar = document.getElementById('statusBar');
+
+      if (['view-splash', 'view-login', 'view-register', 'view-confirm'].includes(viewId)) {
+        bottomNav.style.display = 'none';
+      } else {
+        bottomNav.style.display = 'flex';
+      }
+
+      if (viewId === 'view-splash') {
+        statusBar.classList.add('dark-mode');
+      } else {
+        statusBar.classList.remove('dark-mode');
+      }
+
+      if (navBtn) {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        navBtn.classList.add('active');
+      }
+
+      if (viewId === 'view-map') {
+        setTimeout(initMap, 200);
+        renderMapIncidents();
+      } else if (viewId === 'view-history') {
+        renderHistory();
+      } else if (viewId === 'view-profile') {
+        renderProfile();
+      }
+    }
+
+    // --- GEOLOCATION & MAP ---
+    function initGeolocation() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userCoords.lat = position.coords.latitude;
+            userCoords.lng = position.coords.longitude;
+            document.getElementById('userZone').innerText = `GPS: Lat ${userCoords.lat.toFixed(3)}, Lng ${userCoords.lng.toFixed(3)}`;
+            document.getElementById('alertAddress').value = `GPS (${userCoords.lat.toFixed(4)}, ${userCoords.lng.toFixed(4)})`;
+            if (map) {
+              map.setView([userCoords.lat, userCoords.lng], 15);
+              if (userMarker) userMarker.setLatLng([userCoords.lat, userCoords.lng]);
+            }
+          },
+          (error) => {
+            document.getElementById('userZone').innerText = 'Zona: Cercado (Default GPS)';
+            document.getElementById('alertAddress').value = 'Calle Mercaderes 245, Cercado';
+          }
+        );
+      }
+    }
+
+    function initMap() {
+      if (!map) {
+        map = L.map('map', { zoomControl: false }).setView([userCoords.lat, userCoords.lng], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        alertMarkersGroup = L.layerGroup().addTo(map);
+
+        const userIcon = L.divIcon({
+          className: 'user-pin',
+          html: `<div style="background:#1E3A8A; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 0 10px rgba(0,0,0,0.4);"></div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        });
+        userMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon }).addTo(map);
+      } else {
+        map.invalidateSize();
+      }
+
+      refreshMapMarkers();
+    }
+
+    function refreshMapMarkers() {
+      if (!alertMarkersGroup) return;
+      alertMarkersGroup.clearLayers();
+
+      alertsData.forEach(alert => {
+        const markerIcon = L.divIcon({
+          className: 'custom-alert-pin',
+          html: `<div style="background:${alert.type === 'Robo' ? '#EF4444' : '#F59E0B'}; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-size:10px; font-weight:800; border:2px solid white; box-shadow:0 4px 8px rgba(0,0,0,0.3);">!</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        const m = L.marker([alert.lat, alert.lng], { icon: markerIcon });
+        m.bindPopup(`<b>${alert.type}</b><br>${alert.desc}<br><small>${alert.date}</small>`);
+        alertMarkersGroup.addLayer(m);
+      });
+    }
+
+    function centerUserLocation() {
+      if (map) {
+        map.setView([userCoords.lat, userCoords.lng], 16);
+        showToast("Centrado en tu ubicación actual");
+      }
+    }
+
+    // --- AUTHENTICATION LOGIC ---
+    function handleRegister(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPass').value;
+
+      if (!name || !email || !pass) {
+        showToast("Por favor completa todos los campos.");
+        return;
+      }
+
+      currentUser = { name, email };
+      localStorage.setItem('campana_user', JSON.stringify(currentUser));
+      showToast(`¡Bienvenido/a, ${name}!`);
+      navigateTo('view-map');
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass = document.getElementById('loginPass').value;
+
+      if (!email || !pass) {
+        showToast("Ingresa tu correo y contraseña.");
+        return;
+      }
+
+      currentUser = { name: email.split('@')[0], email };
+      localStorage.setItem('campana_user', JSON.stringify(currentUser));
+      showToast("Sesión iniciada correctamente.");
+      navigateTo('view-map');
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem('campana_user');
+      showToast("Sesión cerrada.");
+      navigateTo('view-login');
+    }
+
+    // --- ALERT HANDLING LOGIC ---
+    function selectChip(el, type) {
+      document.querySelectorAll('.chip-item').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      selectedType = type;
+    }
+
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          uploadedImageBase64 = e.target.result;
+          const box = document.querySelector('.upload-box');
+          box.innerHTML = `<img src="${uploadedImageBase64}" />`;
+          showToast("Fotografía adjuntada.");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function handleSendAlert(e) {
+      e.preventDefault();
+      const desc = document.getElementById('alertDesc').value.trim();
+      if (!desc) {
+        showToast("Ingresa una descripción del problema.");
+        return;
+      }
+
+      // Reproducir sonido song.mp3 al enviar la alerta
+      const alertAudio = document.getElementById('alertSound');
+      if (alertAudio) {
+        alertAudio.currentTime = 0;
+        alertAudio.play().catch(err => console.log("Error al reproducir audio:", err));
+      }
+
+      const newAlert = {
+        id: Date.now(),
+        type: selectedType,
+        desc: desc,
+        lat: userCoords.lat + (Math.random() - 0.5) * 0.002,
+        lng: userCoords.lng + (Math.random() - 0.5) * 0.002,
+        address: document.getElementById('alertAddress').value,
+        date: '07 Set. 2026',
+        status: 'En Revisión',
+        user: currentUser ? currentUser.name : 'Anónimo',
+        image: uploadedImageBase64
+      };
+
+      alertsData.unshift(newAlert);
+      localStorage.setItem('campana_alerts', JSON.stringify(alertsData));
+
+      document.getElementById('alertDesc').value = '';
+      uploadedImageBase64 = null;
+      document.querySelector('.upload-box').innerHTML = `
+        <i data-lucide="camera" style="width: 18px; height: 18px; color: var(--primary);"></i>
+        <span>Adjuntar Fotografía</span>
+      `;
+      lucide.createIcons();
+
+      navigateTo('view-confirm');
+    }
+
+    // --- RENDER HELPERS ---
+    function renderMapIncidents() {
+      const container = document.getElementById('mapIncidentsList');
+      container.innerHTML = alertsData.slice(0, 3).map(a => `
+        <div class="incident-card">
+          <div class="icon-box" style="background:${a.type === 'Robo' ? '#FEE2E2' : '#FEF3C7'}; color:${a.type === 'Robo' ? '#EF4444' : '#D97706'};">
+            <i data-lucide="${a.type === 'Robo' ? 'alert-circle' : 'eye'}" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-title">${a.type}: ${a.desc}</div>
+            <div class="card-subtitle"><i data-lucide="map-pin" style="width:12px; height:12px;"></i> ${a.address} • ${a.date}</div>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('historyList');
+      if (alertsData.length === 0) {
+        container.innerHTML = `<p style="text-align:center; font-size:13px; color:var(--text-muted); margin-top:20px;">No has realizado reportes aún.</p>`;
+        return;
+      }
+
+      container.innerHTML = alertsData.map(a => `
+        <div class="incident-card">
+          <div class="icon-box" style="background:${a.status === 'Atendido' ? '#D1FAE5' : '#FEF3C7'}; color:${a.status === 'Atendido' ? '#059669' : '#D97706'};">
+            <i data-lucide="${a.status === 'Atendido' ? 'check-circle' : 'clock'}" style="width:20px; height:20px;"></i>
+          </div>
+          <div class="card-content">
+            <div class="card-title">${a.type}</div>
+            <div class="card-subtitle">${a.desc}</div>
+            <div class="card-subtitle" style="margin-top:4px;"><i data-lucide="map-pin" style="width:11px; height:11px;"></i> ${a.address} • ${a.date}</div>
+            <span class="status-pill ${a.status === 'Atendido' ? 'status-done' : 'status-review'}">${a.status}</span>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderProfile() {
+      if (currentUser) {
+        const initials = currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'US';
+        document.getElementById('profAvatar').innerText = initials;
+        document.getElementById('profName').innerText = currentUser.name;
+        document.getElementById('profEmail').innerText = currentUser.email;
+        document.getElementById('profAlertCount').innerText = alertsData.filter(a => a.user === currentUser.name).length;
+      }
+    }
+  </script>
+</body>
+</html>
